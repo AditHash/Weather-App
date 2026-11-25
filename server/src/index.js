@@ -19,14 +19,47 @@ app.get("/", (req, res) => {
     res.json({ message: "Welcome to Weather API" });
 });
 
+async function getCoordinates(city) {
+    const response = await axios.get(
+        "https://api.openweathermap.org/geo/1.0/direct",
+        {
+            params: {
+                q: city,
+                limit: 1,
+                appid: API_KEY
+            },
+            timeout: 5000
+        }
+    );
+
+    return response.data;
+}
+
 app.get("/api/weather", async (req, res) => {
+    const { city } = req.query;
+
+    if (typeof city !== "string" || !city.trim()) {
+        return res.status(400).json({
+            error: "City is required"
+        });
+    }
+
     try {
+        const locations = await getCoordinates(city.trim());
+
+        if (locations.length === 0) {
+            return res.status(404).json({
+                error: "City not found"
+            });
+        }
+
+        const { lat, lon } = locations[0];
         const response = await axios.get(
             "https://api.openweathermap.org/data/2.5/weather",
             {
                 params: {
-                    lat: 22.5726,
-                    lon: 88.3639,
+                    lat,
+                    lon,
                     appid: API_KEY,
                     units: "metric"
                 },
